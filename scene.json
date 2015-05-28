@@ -1,0 +1,39 @@
+{
+    "camera": {
+        "eye": [100,40,40],
+        "center": [0,0,0],
+        "up": [0,1,0],
+        "fovy": 90,
+        "near": 30,
+        "far": 230
+    },
+    "lights": {
+        "ambient" : [0.35, 0.35, 0.51],
+        "point": {
+            "pos": [40,120,0],
+            "intensity": [1,1,1]
+        }
+    },
+    "objects": [
+        {
+            "sphere": {
+                "center": [0,20,0],
+                "radius": 30,
+                "diffuse": [0,0,1],
+                "specular": [1,1,1,50]   
+            }
+        },
+        {
+            "cube": {
+                "min": [-80,-50,-50],
+                "max": [50,-45,50],
+                "diffuse": [0.71, 0.71, 0],
+                "specular": [1,1,1,40]
+            }
+        }
+    ],
+    "resolution": {
+        "width": 500,
+        "height": 500
+    }
+}
