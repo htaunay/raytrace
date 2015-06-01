@@ -1,18 +1,20 @@
 class Intersection:
 
-    def __init__(self, d, norm, cube):
+    def __init__(self, distance, norm, point, obj):
 
-        self.d = d
+        self.distance = distance
         self.norm = norm
-        self.cube = cube
+        self.point = point
+        self.obj = obj
 
+    @staticmethod
     def worstCase():
-        return Intersection(float("inf"), None, None)
+        return Intersection(float("inf"), None, None, None)
 
-    def __cpm__(self, other):
+    def __lt__(self, other):
 
         if not isinstance(other, Intersection):
                 raise Exception("Cannot compare Intersection with " +
                                 type(other))
 
-        return self.d - other.d
+        return self.distance < other.distance

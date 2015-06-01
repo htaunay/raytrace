@@ -1,8 +1,10 @@
 import json
 import math
+import pygame
 import numpy as np
 
 from intersection import Intersection
+
 
 def getAxis(camera):
 
@@ -10,24 +12,24 @@ def getAxis(camera):
     eye = np.array(camera["eye"])
     center = np.array(camera["center"])
 
-    ze = (1.0 / np.linalg.norm(eye - center)) * (eye - center)
-    if(np.linalg.norm(ze) != 1.0):
-        raise Exception("Invalid normal Z axis: " + ze)
+    ze = ((eye - center) / np.linalg.norm(eye - center))
+    if(not np.allclose(np.linalg.norm(ze), 1.0)):
+        raise Exception("Invalid normal Z axis: " + str(ze))
 
-    xe = (1.0 / np.linalg.norm(np.cross(up, ze))) * (np.cross(up, ze))
-    if(np.linalg.norm(xe) != 1.0):
-        raise Exception("Invalid normal X axis: " + xe)
+    xe = ((np.cross(up, ze)) / np.linalg.norm(np.cross(up, ze)))
+    if(not np.allclose(np.linalg.norm(xe), 1.0)):
+        raise Exception("Invalid normal X axis: " + str(xe))
 
     ye = np.cross(ze, xe)
-    if(np.linalg.norm(ye) != 1.0):
-        raise Exception("Invalid normal Y axis: " + ye)
+    if(not np.allclose(np.linalg.norm(ye), 1.0)):
+        raise Exception("Invalid normal Y axis: " + str(ye))
 
     return {"xe": xe, "ye": ye, "ze": ze}
 
 
 def getRayFunc(camera, res, xe):
 
-    eye = np.array(camera["eye"])
+    # eye = np.array(camera["eye"])
     near = float(camera["near"])
     fovy = float(camera["fovy"])
     wp = res["width"]
@@ -40,21 +42,47 @@ def getRayFunc(camera, res, xe):
     # o1 = eye - near*axis["ze"] - (h/2)*axis["ye"] - (w/2)*axis["xe"]
     # pxy = o1 + w*(x/wp)*axis["xe"] + h*(y/hp)*axis["ye"]
 
-    def ray(x, y, t):
+    def ray(x, y, t=1):
         d = -near*axis["ze"] + \
             h*(float(y)/hp - 0.5)*axis["ye"] + \
             w*(float(x)/wp - 0.5)*axis["xe"]
 
-        # print "d {}".format(d)
-        # print "norm {}".format(np.linalg.norm(d))
-        return eye + t*d
+        d /= np.linalg.norm(d)
+        if(not np.allclose(np.linalg.norm(d), 1.0)):
+            raise Exception("Invalid normal D direction: " + str(d))
+
+        return t*d
 
     return ray
 
 
-def intersectPlane(plane, ray):
+def intersectPlane(p1, p2, p3, origin, ray):
 
-    return
+    n = np.cross((p2 - p1), (p3 - p2))
+    n /= np.linalg.norm(n)
+    if(not np.allclose(np.linalg.norm(n), 1.0)):
+        raise Exception("Invalid plane normal: " + str(n))
+    # print "n = " + str(n)
+
+    # print str(p1) + " - " + str(origin) + " * "  + str(n) + " / " + str(ray) + " * " + str(n)
+    ti = np.dot((p1 - origin), n) / np.dot(ray, n)
+    # print "ti = " + str(ti)
+    pi = origin + ti * ray
+    # print str(pi) + " = " + str(origin) + " + " + str(ti) + " * " + str(ray) + "\n"
+
+    a1 = np.dot(n, np.cross((p3 - p2), (pi - p2))) / 2.0
+    a2 = np.dot(n, np.cross((p1 - p3), (pi - p3))) / 2.0
+    a3 = np.dot(n, np.cross((p2 - p1), (pi - p1))) / 2.0
+    ar = a1 + a2 + a3
+
+    l1 = a1 / ar
+    l2 = a2 / ar
+    l3 = a3 / ar
+
+    if(l1 >= 0 and l1 <= 1 and l2 >= 0 and l2 <= 1 and l3 >= 0 and l3 <= 1):
+        return Intersection(np.linalg.norm(ti), n, pi, None)
+
+    return None
 
 
 def intersectCube(origin, ray, cube):
@@ -64,23 +92,262 @@ def intersectCube(origin, ray, cube):
 
     closestIntersect = Intersection.worstCase()
 
-    # Front side
-    p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    p2 = np.array([maxBound[0], minBound[1], minBound[2]])
-    p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
-    
+    # # Front side
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([maxBound[0], minBound[1], minBound[2]])
+    # p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
 
-    return
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    # p3 = np.array([minBound[0], maxBound[1], minBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # # Back side
+    # p1 = np.array([minBound[0], minBound[1], maxBound[2]])
+    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    # p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # p1 = np.array([minBound[0], minBound[1], maxBound[2]])
+    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    # p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # Right side
+    p1 = np.array([maxBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
+
+    p1 = np.array([maxBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([maxBound[0], minBound[1], maxBound[2]])
+    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
+
+    # # Left side
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([minBound[0], maxBound[1], minBound[2]])
+    # p3 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    # p3 = np.array([minBound[0], maxBound[1], minBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+    
+    # Up side
+    p1 = np.array([minBound[0], maxBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
+
+    p1 = np.array([minBound[0], maxBound[1], minBound[2]])
+    p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
+
+    # # Down side
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([maxBound[0], minBound[1], minBound[2]])
+    # p3 = np.array([maxBound[0], minBound[1], maxBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    # p2 = np.array([maxBound[0], minBound[1], maxBound[2]])
+    # p3 = np.array([minBound[0], minBound[1], maxBound[2]])
+    # intersection = intersectPlane(p1, p2, p3, origin, ray)
+    # if(intersection != None and intersection < closestIntersect):
+    #     intersection.obj = cube
+    #     closestIntersect = intersection
+
+    # print "point = " + str(closestIntersect.point)
+    if(closestIntersect.distance < 1000):
+        return closestIntersect
+
+    return None
+
+
+def intersectSphere(origin, ray, sphere):
+
+    center = np.array(sphere["center"])
+    radius = float(sphere["radius"])
+
+    closestIntersect = Intersection.worstCase()
+
+    a = np.dot(ray, ray)
+    b = np.dot(2*ray, (origin - center))
+    c = np.dot((origin - center), (origin - center)) - (radius * radius)
+
+    delta = b*b - 4*a*c
+    if(delta > 0):
+
+        t1 = (-b - math.sqrt(delta)) / (2*a)
+        t2 = (-b + math.sqrt(delta)) / (2*a)
+        ti = min(t1, t2)
+
+        if(ti > 0):
+
+            pi = origin + ray*ti
+            n = (pi - center)
+            n /= np.linalg.norm(n)
+
+            return Intersection(ti, n, pi, sphere)
+
+    return None
+
+
+def intersectObjs(origin, ray, scene):
+
+    icube = intersectCube(origin, ray, scene["objects"][1]["cube"])
+    isphere = intersectSphere(origin, ray, scene["objects"][0]["sphere"])
+   
+    inter = None
+    if(icube):
+        inter = icube
+
+    if(isphere):
+        if(not inter or isphere < icube):
+            inter = isphere
+
+    return inter
+        
+def colour(obj, lights, camera, intersection):
+
+    eye = np.array(camera["eye"])
+    Iamb = np.array(lights["ambient"])
+    Ipoint = np.array(lights["point"]["intensity"])
+    pointPos = np.array(lights["point"]["pos"])
+
+    diffuse = np.array(obj["diffuse"])
+    specReflection = np.array(obj["specular"])[:3]
+    specCoefficient = np.array(obj["specular"])[3]
+
+    Camb = Iamb * diffuse
+    # print "Amb: " + str(Iamb) + " + " + str(diffuse) + " = " + str(Camb)
+
+    l = pointPos - intersection.point
+    # print "L " + str(intersection.norm)
+    l /= np.linalg.norm(l)
+    Cdiff = max(np.dot(l, intersection.norm), 0) * (Ipoint * diffuse)
+    # print "l " + str(l) + " = " + str(pointPos) + " - " + str(intersection.point)
+    # print "Diff: " + str(np.dot(intersection.norm, l)) + " * " + str(Ipoint) + " * " + str(diffuse) + " = " + str(Cdiff)
+
+    v = eye - intersection.point
+    v /= np.linalg.norm(v)
+    s = l + v
+    s /= np.linalg.norm(s)
+    # print "l = " + str(l)
+    # print "v = " + str(v)
+    # print "s = " + str(s)
+    # print "p = " + str(intersection.point)
+    # print "dot(s,n) = " + str(np.dot(s, intersection.norm))
+    Cspec = math.pow(max(np.dot(s, intersection.norm), 0), specCoefficient) * \
+             (Ipoint * specReflection)
+
+    return Camb + Cdiff #  + Cspec
+
+
+def ambient(obj, lights):
+
+    Iamb = np.array(lights["ambient"])
+    diffuse = np.array(obj["diffuse"])
+    return Iamb * diffuse
+
 
 scene = json.load(open("scene.json"))
 
 axis = getAxis(scene["camera"])
 
-ray = getRayFunc(scene["camera"], scene["resolution"], axis)
+rayFunc = getRayFunc(scene["camera"], scene["resolution"], axis)
 
-intersectCube(np.array(scene["camera"]["eye"]), ray, scene["objects"][1]["cube"])
+pygame.init()
+screen = pygame.display.set_mode([500,500])
+done = False
+clock = pygame.time.Clock()
 
-# import pprint
+lightPos = np.array(scene["lights"]["point"]["pos"])
 
-# pp = pprint.PrettyPrinter(indent=4)
-# pp.pprint(json.load(open("scene.json")))
+while not done:
+    
+    clock.tick(1)
+
+    screen.fill((255,255,255))
+
+    for i in range(0,500):
+        for j in range(0,500):
+            ray = rayFunc(j, i)
+
+            inter = intersectObjs(np.array(scene["camera"]["eye"]), ray, scene)
+            if(inter):
+                # print "inter " + str(inter.point) 
+
+                lightRay = lightPos - inter.point
+                lightRay /= np.linalg.norm(lightRay)
+                lightInter = intersectObjs(inter.point, lightRay, scene)
+
+                if(not lightInter or np.allclose(inter.point, lightInter.point)):
+                    c = colour(inter.obj, scene["lights"], scene["camera"], inter)
+
+                    if(i == 100 and j == 200):
+                        print "200/100 = " + str(c)
+
+                    if(i == 294 and j == 278):
+                        print "278/294 = " + str(c)
+
+                    c *= 255
+                    c[0] = c[0] if c[0] <= 255 else 255
+                    c[1] = c[1] if c[1] <= 255 else 255
+                    c[2] = c[2] if c[2] <= 255 else 255
+                    screen.set_at((j,500 - i), c)
+                else:
+                    print "lightray \t" + str(lightInter.point) 
+                    print "inter \t\t" + str(inter.point) 
+                    c = ambient(inter.obj, scene["lights"])
+                    c *= 255
+                    screen.set_at((j,500 - i), c)
+
+            else:
+
+                screen.set_at((j,500 - i), (230,230,230))
+
+            pygame.display.update()
+
+            for event in pygame.event.get(): # User did something
+                if event.type == pygame.QUIT: # If user clicked close
+                    done=True # Flag that we are done so we exit this loop
+    
+pygame.quit();
