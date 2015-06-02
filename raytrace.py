@@ -66,6 +66,8 @@ def intersectPlane(p1, p2, p3, origin, ray):
 
     # print str(p1) + " - " + str(origin) + " * "  + str(n) + " / " + str(ray) + " * " + str(n)
     ti = np.dot((p1 - origin), n) / np.dot(ray, n)
+    if(ti <= 0):
+        return None
     # print "ti = " + str(ti)
     pi = origin + ti * ray
     # print str(pi) + " = " + str(origin) + " + " + str(ti) + " * " + str(ray) + "\n"
@@ -268,17 +270,21 @@ def colour(obj, lights, camera, intersection):
 
     v = eye - intersection.point
     v /= np.linalg.norm(v)
-    s = l + v
-    s /= np.linalg.norm(s)
+    # s = l + v
+    # s /= np.linalg.norm(s)
     # print "l = " + str(l)
     # print "v = " + str(v)
     # print "s = " + str(s)
     # print "p = " + str(intersection.point)
     # print "dot(s,n) = " + str(np.dot(s, intersection.norm))
-    Cspec = math.pow(max(np.dot(s, intersection.norm), 0), specCoefficient) * \
-             (Ipoint * specReflection)
+    #Cspec = math.pow(max(np.dot(s, intersection.norm), 0), specCoefficient) * \
+    #         (Ipoint * specReflection)
 
-    return Camb + Cdiff #  + Cspec
+    r = l - 2*(np.dot(l, intersection.norm))*intersection.norm
+    Cspec = math.pow(max(np.dot(-r, v), 0), specCoefficient) * \
+            (Ipoint * specReflection)
+
+    return Camb + Cdiff + Cspec
 
 
 def ambient(obj, lights):
@@ -294,6 +300,13 @@ axis = getAxis(scene["camera"])
 
 rayFunc = getRayFunc(scene["camera"], scene["resolution"], axis)
 
+###
+# ray = rayFunc(200,100)
+# inter = intersectObjs(np.array(scene["camera"]["eye"]), ray, scene)
+# c = colour(inter.obj, scene["lights"], scene["camera"], inter)
+# print "c = " + str(c)
+###
+
 pygame.init()
 screen = pygame.display.set_mode([500,500])
 done = False
@@ -301,9 +314,15 @@ clock = pygame.time.Clock()
 
 lightPos = np.array(scene["lights"]["point"]["pos"])
 
-while not done:
+while True:
     
+    for event in pygame.event.get(): # User did something
+        if event.type == pygame.QUIT: # If user clicked close
+            break
+
     clock.tick(1)
+    if(done):
+        continue
 
     screen.fill((255,255,255))
 
@@ -317,9 +336,9 @@ while not done:
 
                 lightRay = lightPos - inter.point
                 lightRay /= np.linalg.norm(lightRay)
-                lightInter = intersectObjs(inter.point, lightRay, scene)
+                lightInter = intersectObjs(inter.point + lightRay*0.01, lightRay, scene)
 
-                if(not lightInter or np.allclose(inter.point, lightInter.point)):
+                if(not lightInter):
                     c = colour(inter.obj, scene["lights"], scene["camera"], inter)
 
                     if(i == 100 and j == 200):
@@ -334,8 +353,6 @@ while not done:
                     c[2] = c[2] if c[2] <= 255 else 255
                     screen.set_at((j,500 - i), c)
                 else:
-                    print "lightray \t" + str(lightInter.point) 
-                    print "inter \t\t" + str(inter.point) 
                     c = ambient(inter.obj, scene["lights"])
                     c *= 255
                     screen.set_at((j,500 - i), c)
@@ -344,10 +361,8 @@ while not done:
 
                 screen.set_at((j,500 - i), (230,230,230))
 
-            pygame.display.update()
-
-            for event in pygame.event.get(): # User did something
-                if event.type == pygame.QUIT: # If user clicked close
-                    done=True # Flag that we are done so we exit this loop
+   
+        pygame.display.update()
+    done = True
     
 pygame.quit();
