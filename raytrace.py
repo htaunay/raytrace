@@ -29,7 +29,6 @@ def getAxis(camera):
 
 def getRayFunc(camera, res, xe):
 
-    # eye = np.array(camera["eye"])
     near = float(camera["near"])
     fovy = float(camera["fovy"])
     wp = res["width"]
@@ -38,9 +37,6 @@ def getRayFunc(camera, res, xe):
     hypotenuse = near / math.cos(math.radians(fovy/2.0))
     w = math.sqrt(hypotenuse * hypotenuse - near * near) * 2.0
     h = (w * hp) / wp
-
-    # o1 = eye - near*axis["ze"] - (h/2)*axis["ye"] - (w/2)*axis["xe"]
-    # pxy = o1 + w*(x/wp)*axis["xe"] + h*(y/hp)*axis["ye"]
 
     def ray(x, y, t=1):
         d = -near*axis["ze"] + \
@@ -56,21 +52,18 @@ def getRayFunc(camera, res, xe):
     return ray
 
 
-def intersectPlane(p1, p2, p3, origin, ray):
+def intersectTriangle(p1, p2, p3, origin, ray):
 
     n = np.cross((p2 - p1), (p3 - p2))
     n /= np.linalg.norm(n)
     if(not np.allclose(np.linalg.norm(n), 1.0)):
         raise Exception("Invalid plane normal: " + str(n))
-    # print "n = " + str(n)
 
-    # print str(p1) + " - " + str(origin) + " * "  + str(n) + " / " + str(ray) + " * " + str(n)
     ti = np.dot((p1 - origin), n) / np.dot(ray, n)
     if(ti <= 0):
         return None
-    # print "ti = " + str(ti)
+
     pi = origin + ti * ray
-    # print str(pi) + " = " + str(origin) + " + " + str(ti) + " * " + str(ray) + "\n"
 
     a1 = np.dot(n, np.cross((p3 - p2), (pi - p2))) / 2.0
     a2 = np.dot(n, np.cross((p1 - p3), (pi - p3))) / 2.0
@@ -94,45 +87,45 @@ def intersectCube(origin, ray, cube):
 
     closestIntersect = Intersection.worstCase()
 
-    # # Front side
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([maxBound[0], minBound[1], minBound[2]])
-    # p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    # Front side
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], minBound[1], minBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([maxBound[0], maxBound[1], minBound[2]])
-    # p3 = np.array([minBound[0], maxBound[1], minBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], maxBound[1], minBound[2]])
+    p3 = np.array([minBound[0], maxBound[1], minBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # # Back side
-    # p1 = np.array([minBound[0], minBound[1], maxBound[2]])
-    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
-    # p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    # Back side
+    p1 = np.array([minBound[0], minBound[1], maxBound[2]])
+    p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # p1 = np.array([minBound[0], minBound[1], maxBound[2]])
-    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
-    # p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    p1 = np.array([minBound[0], minBound[1], maxBound[2]])
+    p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
     # Right side
     p1 = np.array([maxBound[0], minBound[1], minBound[2]])
     p2 = np.array([maxBound[0], maxBound[1], minBound[2]])
     p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
-    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
     if(intersection != None and intersection < closestIntersect):
         intersection.obj = cube
         closestIntersect = intersection
@@ -140,33 +133,33 @@ def intersectCube(origin, ray, cube):
     p1 = np.array([maxBound[0], minBound[1], minBound[2]])
     p2 = np.array([maxBound[0], maxBound[1], maxBound[2]])
     p3 = np.array([maxBound[0], minBound[1], maxBound[2]])
-    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
     if(intersection != None and intersection < closestIntersect):
         intersection.obj = cube
         closestIntersect = intersection
 
-    # # Left side
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([minBound[0], maxBound[1], minBound[2]])
-    # p3 = np.array([minBound[0], maxBound[1], maxBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    # Left side
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([minBound[0], maxBound[1], minBound[2]])
+    p3 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
-    # p3 = np.array([minBound[0], maxBound[1], minBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
+    p3 = np.array([minBound[0], maxBound[1], minBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
     
     # Up side
     p1 = np.array([minBound[0], maxBound[1], minBound[2]])
     p2 = np.array([maxBound[0], maxBound[1], maxBound[2]])
     p3 = np.array([maxBound[0], maxBound[1], minBound[2]])
-    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
     if(intersection != None and intersection < closestIntersect):
         intersection.obj = cube
         closestIntersect = intersection
@@ -174,29 +167,28 @@ def intersectCube(origin, ray, cube):
     p1 = np.array([minBound[0], maxBound[1], minBound[2]])
     p2 = np.array([minBound[0], maxBound[1], maxBound[2]])
     p3 = np.array([maxBound[0], maxBound[1], maxBound[2]])
-    intersection = intersectPlane(p1, p2, p3, origin, ray)
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
     if(intersection != None and intersection < closestIntersect):
         intersection.obj = cube
         closestIntersect = intersection
 
-    # # Down side
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([maxBound[0], minBound[1], minBound[2]])
-    # p3 = np.array([maxBound[0], minBound[1], maxBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    # Down side
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], minBound[1], minBound[2]])
+    p3 = np.array([maxBound[0], minBound[1], maxBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # p1 = np.array([minBound[0], minBound[1], minBound[2]])
-    # p2 = np.array([maxBound[0], minBound[1], maxBound[2]])
-    # p3 = np.array([minBound[0], minBound[1], maxBound[2]])
-    # intersection = intersectPlane(p1, p2, p3, origin, ray)
-    # if(intersection != None and intersection < closestIntersect):
-    #     intersection.obj = cube
-    #     closestIntersect = intersection
+    p1 = np.array([minBound[0], minBound[1], minBound[2]])
+    p2 = np.array([maxBound[0], minBound[1], maxBound[2]])
+    p3 = np.array([minBound[0], minBound[1], maxBound[2]])
+    intersection = intersectTriangle(p1, p2, p3, origin, ray)
+    if(intersection != None and intersection < closestIntersect):
+        intersection.obj = cube
+        closestIntersect = intersection
 
-    # print "point = " + str(closestIntersect.point)
     if(closestIntersect.distance < 1000):
         return closestIntersect
 
@@ -259,26 +251,13 @@ def colour(obj, lights, camera, intersection):
     specCoefficient = np.array(obj["specular"])[3]
 
     Camb = Iamb * diffuse
-    # print "Amb: " + str(Iamb) + " + " + str(diffuse) + " = " + str(Camb)
 
     l = pointPos - intersection.point
-    # print "L " + str(intersection.norm)
     l /= np.linalg.norm(l)
     Cdiff = max(np.dot(l, intersection.norm), 0) * (Ipoint * diffuse)
-    # print "l " + str(l) + " = " + str(pointPos) + " - " + str(intersection.point)
-    # print "Diff: " + str(np.dot(intersection.norm, l)) + " * " + str(Ipoint) + " * " + str(diffuse) + " = " + str(Cdiff)
 
     v = eye - intersection.point
     v /= np.linalg.norm(v)
-    # s = l + v
-    # s /= np.linalg.norm(s)
-    # print "l = " + str(l)
-    # print "v = " + str(v)
-    # print "s = " + str(s)
-    # print "p = " + str(intersection.point)
-    # print "dot(s,n) = " + str(np.dot(s, intersection.norm))
-    #Cspec = math.pow(max(np.dot(s, intersection.norm), 0), specCoefficient) * \
-    #         (Ipoint * specReflection)
 
     r = l - 2*(np.dot(l, intersection.norm))*intersection.norm
     Cspec = math.pow(max(np.dot(-r, v), 0), specCoefficient) * \
@@ -299,13 +278,6 @@ scene = json.load(open("scene.json"))
 axis = getAxis(scene["camera"])
 
 rayFunc = getRayFunc(scene["camera"], scene["resolution"], axis)
-
-###
-# ray = rayFunc(200,100)
-# inter = intersectObjs(np.array(scene["camera"]["eye"]), ray, scene)
-# c = colour(inter.obj, scene["lights"], scene["camera"], inter)
-# print "c = " + str(c)
-###
 
 pygame.init()
 screen = pygame.display.set_mode([500,500])
@@ -340,12 +312,6 @@ while True:
 
                 if(not lightInter):
                     c = colour(inter.obj, scene["lights"], scene["camera"], inter)
-
-                    if(i == 100 and j == 200):
-                        print "200/100 = " + str(c)
-
-                    if(i == 294 and j == 278):
-                        print "278/294 = " + str(c)
 
                     c *= 255
                     c[0] = c[0] if c[0] <= 255 else 255
